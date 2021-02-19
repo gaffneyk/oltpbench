@@ -40,86 +40,20 @@
 package com.oltpbenchmark.benchmarks.seats.procedures;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import org.apache.log4j.Logger;
-import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.api.Procedure;
 
-import com.oltpbenchmark.benchmarks.seats.SEATSConstants;
-import com.oltpbenchmark.benchmarks.seats.util.ErrorType;
-
 public class UpdateReservation extends Procedure {
-    private static final Logger LOG = Logger.getLogger(UpdateReservation.class);
-    
-    public final SQLStmt CheckSeat = new SQLStmt(
-        "SELECT R_ID " +
-        "  FROM " + SEATSConstants.TABLENAME_RESERVATION +
-        " WHERE R_F_ID = ? and R_SEAT = ?");
-
-    public final SQLStmt CheckCustomer = new SQLStmt(
-        "SELECT R_ID " + 
-        "  FROM " + SEATSConstants.TABLENAME_RESERVATION +
-        " WHERE R_F_ID = ? AND R_C_ID = ?");
-
-    private static final String BASE_SQL = "UPDATE " + SEATSConstants.TABLENAME_RESERVATION +
-                                           "   SET R_SEAT = ?, %s = ? " +
-                                           " WHERE R_ID = ? AND R_C_ID = ? AND R_F_ID = ?";
-    
-    public final SQLStmt ReserveSeat0 = new SQLStmt(String.format(BASE_SQL, "R_IATTR00"));
-    public final SQLStmt ReserveSeat1 = new SQLStmt(String.format(BASE_SQL, "R_IATTR01"));
-    public final SQLStmt ReserveSeat2 = new SQLStmt(String.format(BASE_SQL, "R_IATTR02"));
-    public final SQLStmt ReserveSeat3 = new SQLStmt(String.format(BASE_SQL, "R_IATTR03"));
+    private static native long updateReservation(long r_id, long f_id, long c_id, long seatnum, long attr_idx, long attr_val);
 
     public static final int NUM_UPDATES = 4;
-    public final SQLStmt ReserveSeats[] = {
-        ReserveSeat0,
-        ReserveSeat1,
-        ReserveSeat2,
-        ReserveSeat3,
-    };
-    
+
     public void run(Connection conn, long r_id, long f_id, long c_id, long seatnum, long attr_idx, long attr_val) throws SQLException {
-        final boolean debug = LOG.isDebugEnabled();
-        assert(attr_idx >= 0);
-        assert(attr_idx < ReserveSeats.length);
-        boolean found;
-        
-        PreparedStatement stmt = null;
-        ResultSet results = null;
-        
-        // Check if Seat is Available
-        stmt = this.getPreparedStatement(conn, CheckSeat, f_id, seatnum);
-        results = stmt.executeQuery();
-        found = results.next();
-        results.close();
-        if (found) {
-            throw new UserAbortException(ErrorType.SEAT_ALREADY_RESERVED +
-                                         String.format(" Seat %d is already reserved on flight #%d", seatnum, f_id));
+        long ret = this.updateReservation(r_id, f_id, c_id, seatnum, attr_idx, attr_val);
+
+        if (ret != 0) {
+        	throw new UserAbortException(new String("Error in UpdateReservation"));
         }
-        // Check if the Customer already has a seat on this flight
-        stmt = this.getPreparedStatement(conn, CheckCustomer, f_id, c_id);
-        results = stmt.executeQuery();
-        found = results.next();
-        results.close();
-        if (found == false) {
-            throw new UserAbortException(ErrorType.CUSTOMER_ALREADY_HAS_SEAT +
-                                         String.format(" Customer %d does not have an existing reservation on flight #%d", c_id, f_id));
-        }
-        
-        // Update the seat reservation for the customer
-        stmt = this.getPreparedStatement(conn, ReserveSeats[(int)attr_idx], seatnum, attr_val, r_id, c_id, f_id);
-        int updated = stmt.executeUpdate();
-        if (updated != 1) {
-            String msg = String.format("Failed to update reservation on flight %d for customer #%d - Updated %d records", f_id, c_id, updated);
-            if (debug) LOG.warn(msg);
-            throw new UserAbortException(ErrorType.VALIDITY_ERROR + " " + msg);
-        }
-        
-        if (debug)
-            LOG.debug(String.format("Updated reservation on flight %d for customer %d", f_id, c_id));
-        return;
     } 
 }

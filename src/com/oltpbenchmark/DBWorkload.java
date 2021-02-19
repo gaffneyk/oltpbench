@@ -20,6 +20,8 @@ package com.oltpbenchmark;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -56,6 +58,13 @@ import com.oltpbenchmark.util.JSONUtil;
 import com.oltpbenchmark.util.JSONSerializable;
 
 public class DBWorkload {
+    static {
+        Path p = Paths.get("/Users/kpg/Dev/dibs/target/release/libdibs_jni.dylib");
+        System.load(p.toAbsolutePath().toString());
+    }
+
+    private static native void handshake();
+
     private static final Logger LOG = Logger.getLogger(DBWorkload.class);
     
     private static final String SINGLE_LINE = StringUtil.repeat("=", 70);
@@ -68,6 +77,9 @@ public class DBWorkload {
      * @throws Exception 
      */
     public static void main(String[] args) throws Exception {
+        // Load the native database.
+        handshake();
+
         // Initialize log4j
         String log4jPath = System.getProperty("log4j.configuration");
         if (log4jPath != null) {

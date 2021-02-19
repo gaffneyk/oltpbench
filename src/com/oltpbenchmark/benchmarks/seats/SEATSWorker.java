@@ -509,7 +509,7 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         }
         
         if (LOG.isTraceEnabled()) LOG.trace("Calling " + proc);
-        List<Object[]> results = proc.run(conn,
+        long[] results = proc.run(conn,
                                           depart_airport_id,
                                           arrive_airport_id,
                                           start_date,
@@ -517,17 +517,17 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
                                           distance);
         conn.commit();
         
-        if (results.size() > 1) {
+        if (results.length > 1) {
             // Convert the data into a FlightIds that other transactions can use
             int ctr = 0;
-            for (Object row[] : results) {
-                FlightId flight_id = new FlightId((Long)row[0]);
+            for (long flight_id_long : results) {
+                FlightId flight_id = new FlightId(flight_id_long);
                 assert(flight_id != null);
                 boolean added = profile.addFlightId(flight_id);
                 if (added) ctr++;
             } // WHILE
             if (LOG.isDebugEnabled()) LOG.debug(String.format("Added %d out of %d FlightIds to local cache",
-                                                ctr, results.size()));
+                                                ctr, results.length));
         }
         return (true);
     }
@@ -546,7 +546,7 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         Long airport_depart_id = search_flight.getDepartAirportId();
         
         if (LOG.isTraceEnabled()) LOG.trace("Calling " + proc);
-        Object[][] results = proc.run(conn, search_flight.encode());
+        long[] results = proc.run(conn, search_flight.encode());
         conn.commit();
         
         int rowCount = results.length;
@@ -564,10 +564,7 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         BitSet seats = getSeatsBitSet(search_flight);
         tmp_reservations.clear();
         
-        for (Object row[] : results) {
-            if (row == null) continue; //  || rng.nextInt(100) < 75) continue; // HACK
-            Integer seatnum = (Integer)row[1];
-          
+        for (long seatnum : results) {
             // We first try to get a CustomerId based at this departure airport
             if (LOG.isTraceEnabled())
                 LOG.trace("Looking for a random customer to fly on " + search_flight);
@@ -588,8 +585,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
             Reservation r = new Reservation(profile.getNextReservationId(getId()),
                                             search_flight,
                                             customer_id,
-                                            seatnum.intValue());
-            seats.set(seatnum);
+                                            (int)seatnum);
+            seats.set((int)seatnum);
             tmp_reservations.add(r);
             if (LOG.isTraceEnabled())
                 LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
