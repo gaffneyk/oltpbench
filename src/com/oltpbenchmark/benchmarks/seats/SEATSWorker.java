@@ -610,12 +610,15 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
                 LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
         } // WHILE
 
-        if (tmp_reservations.isEmpty() == false) {
+        if (!tmp_reservations.isEmpty()) {
             Collections.shuffle(tmp_reservations);
-            cache.addAll(tmp_reservations);
-            while (cache.size() > SEATSConstants.CACHE_LIMIT_PENDING_INSERTS) {
-                cache.remove();
-            } // WHILE
+
+            int cache_free = SEATSConstants.CACHE_LIMIT_PENDING_INSERTS - cache.size();
+
+            for (int i = 0; i < Math.min(cache_free, rowCount); i++) {
+                cache.add(tmp_reservations.get(i));
+            }
+
             if (LOG.isDebugEnabled())
                 LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
                           tmp_reservations.size(), search_flight, cache.size()));
