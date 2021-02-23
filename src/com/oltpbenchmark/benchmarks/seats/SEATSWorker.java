@@ -582,12 +582,17 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         BitSet seats = getSeatsBitSet(search_flight);
         tmp_reservations.clear();
 
-        for (long seatnum : results) {
+        int cache_free = SEATSConstants.CACHE_LIMIT_PENDING_INSERTS - cache.size();
+        int reservations_to_add = Math.min(cache_free, rowCount);
+
+        for (int i = 0; i < reservations_to_add; i++) {
+            long seatnum = results[i];
+
             // We first try to get a CustomerId based at this departure airport
             if (LOG.isTraceEnabled())
                 LOG.trace("Looking for a random customer to fly on " + search_flight);
             CustomerId customer_id = profile.getRandomCustomerId(airport_depart_id);
-         
+
             // We will go for a random one if:
             //  (1) The Customer is already booked on this Flight
             //  (2) We already made a new Reservation just now for this Customer
@@ -608,16 +613,12 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
             tmp_reservations.add(r);
             if (LOG.isTraceEnabled())
                 LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
-        } // WHILE
+        }
 
         if (!tmp_reservations.isEmpty()) {
             Collections.shuffle(tmp_reservations);
 
-            int cache_free = SEATSConstants.CACHE_LIMIT_PENDING_INSERTS - cache.size();
-
-            for (int i = 0; i < Math.min(cache_free, rowCount); i++) {
-                cache.add(tmp_reservations.get(i));
-            }
+            cache.addAll(tmp_reservations);
 
             if (LOG.isDebugEnabled())
                 LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
