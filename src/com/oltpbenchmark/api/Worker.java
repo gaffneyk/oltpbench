@@ -329,12 +329,15 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     // changed, otherwise we're recording results for a query
                     // that either started during the warmup phase or ended
                     // after the timer went off.
-                    // if (preState == State.MEASURE && type != null && this.wrkldState.getCurrentPhase().id == phase.id) {
-                    //     latencies.addLatency(type.getId(), start, end, this.id, phase.id);
-                    //     intervalRequests.incrementAndGet();
-                    // }
-                    // if (phase.isLatencyRun())
-                    //     this.wrkldState.startColdQuery();
+                    if (preState == State.MEASURE 
+                            && type != null 
+                            && phase != null
+                            && this.wrkldState.getCurrentPhase().id == phase.id) {
+                        latencies.addLatency(type.getId(), start, end, this.id, phase.id);
+                        intervalRequests.incrementAndGet();
+                    }
+                    if (phase != null && phase.isLatencyRun())
+                        this.wrkldState.startColdQuery();
                     break;
                 case COLD_QUERY:
                     // No recording for cold runs, but next time we will since
