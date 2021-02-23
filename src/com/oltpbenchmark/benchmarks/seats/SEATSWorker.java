@@ -552,9 +552,9 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
      * @throws SQLException
      */
     private boolean executeFindOpenSeats(FindOpenSeats proc) throws SQLException {
-	final long start = System.currentTimeMillis();
-	    
-	final FlightId search_flight = this.profile.getRandomFlightId();
+    	final long start = System.currentTimeMillis();
+    	    
+    	final FlightId search_flight = this.profile.getRandomFlightId();
         assert(search_flight != null);
         Long airport_depart_id = search_flight.getDepartAirportId();
         
@@ -563,66 +563,66 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         conn.commit();
         
         int rowCount = results.length;
+
         assert (rowCount <= SEATSConstants.FLIGHTS_NUM_SEATS) :
             String.format("Unexpected %d open seats returned for %s", rowCount, search_flight);
-    
+
         // there is some tiny probability of an empty flight .. maybe 1/(20**150)
         // if you hit this assert (with valid code), play the lottery!
         if (rowCount == 0) return (true);
 
         LinkedList<Reservation> cache = CACHE_RESERVATIONS.get(CacheType.PENDING_INSERTS);
         assert(cache != null) : "Unexpected " + CacheType.PENDING_INSERTS;
-        
+
+        System.out.println("row count: " + rowCount);
+        System.out.println("cache size: " + cache.size());
+            
         // Store pending reservations in our queue for a later transaction            
-	//
-	// Note (Kevin): Actually, this queue is never used. Skip this part.
-	
-	
 
-       BitSet seats = getSeatsBitSet(search_flight);
-       tmp_reservations.clear();
-       
-       for (long seatnum : results) {
-           // We first try to get a CustomerId based at this departure airport
-           if (LOG.isTraceEnabled())
-               LOG.trace("Looking for a random customer to fly on " + search_flight);
-           CustomerId customer_id = profile.getRandomCustomerId(airport_depart_id);
+        BitSet seats = getSeatsBitSet(search_flight);
+        tmp_reservations.clear();
+
+        for (long seatnum : results) {
+            // We first try to get a CustomerId based at this departure airport
+            if (LOG.isTraceEnabled())
+                LOG.trace("Looking for a random customer to fly on " + search_flight);
+            CustomerId customer_id = profile.getRandomCustomerId(airport_depart_id);
          
-           // We will go for a random one if:
-           //  (1) The Customer is already booked on this Flight
-           //  (2) We already made a new Reservation just now for this Customer
-           int tries = SEATSConstants.FLIGHTS_NUM_SEATS;
-           while (tries-- > 0 && (customer_id == null)) { //  || isCustomerBookedOnFlight(customer_id, flight_id))) {
-               customer_id = profile.getRandomCustomerId();
-               if (LOG.isTraceEnabled())
-                   LOG.trace("RANDOM CUSTOMER: " + customer_id);
-           } // WHILE
-           assert(customer_id != null) :
-               String.format("Failed to find a unique Customer to reserve for seat #%d on %s", seatnum, search_flight);
-   
-           Reservation r = new Reservation(profile.getNextReservationId(getId()),
-                                           search_flight,
-                                           customer_id,
-                                           (int)seatnum);
-           seats.set((int)seatnum);
-           tmp_reservations.add(r);
-           if (LOG.isTraceEnabled())
-               LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
-       } // WHILE
+            // We will go for a random one if:
+            //  (1) The Customer is already booked on this Flight
+            //  (2) We already made a new Reservation just now for this Customer
+            int tries = SEATSConstants.FLIGHTS_NUM_SEATS;
+            while (tries-- > 0 && (customer_id == null)) { //  || isCustomerBookedOnFlight(customer_id, flight_id))) {
+                customer_id = profile.getRandomCustomerId();
+                if (LOG.isTraceEnabled())
+                    LOG.trace("RANDOM CUSTOMER: " + customer_id);
+            } // WHILE
+            assert(customer_id != null) :
+                String.format("Failed to find a unique Customer to reserve for seat #%d on %s", seatnum, search_flight);
 
-       if (tmp_reservations.isEmpty() == false) {
-           Collections.shuffle(tmp_reservations);
-           cache.addAll(tmp_reservations);
-           while (cache.size() > SEATSConstants.CACHE_LIMIT_PENDING_INSERTS) {
-               cache.remove();
-           } // WHILE
-           if (LOG.isDebugEnabled())
-               LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
-                         tmp_reservations.size(), search_flight, cache.size()));
-       }
+            Reservation r = new Reservation(profile.getNextReservationId(getId()),
+                                            search_flight,
+                                            customer_id,
+                                            (int)seatnum);
+            seats.set((int)seatnum);
+            tmp_reservations.add(r);
+            if (LOG.isTraceEnabled())
+                LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
+        } // WHILE
 
-	final long stop = System.currentTimeMillis();
-	// System.out.println("findOpenSeats: " + (stop - start));
+        if (tmp_reservations.isEmpty() == false) {
+            Collections.shuffle(tmp_reservations);
+            cache.addAll(tmp_reservations);
+            while (cache.size() > SEATSConstants.CACHE_LIMIT_PENDING_INSERTS) {
+                cache.remove();
+            } // WHILE
+            if (LOG.isDebugEnabled())
+                LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
+                          tmp_reservations.size(), search_flight, cache.size()));
+        }
+
+    	final long stop = System.currentTimeMillis();
+    	// System.out.println("findOpenSeats: " + (stop - start));
 
         return (true);
     }
