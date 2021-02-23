@@ -59,8 +59,7 @@ import com.oltpbenchmark.util.JSONSerializable;
 
 public class DBWorkload {
     static {
-        Path p = Paths.get("/Users/kpg/Dev/dibs/target/release/libdibs_jni.dylib");
-        System.load(p.toAbsolutePath().toString());
+	System.loadLibrary("dibs_jni");
     }
 
     private static native void handshake();

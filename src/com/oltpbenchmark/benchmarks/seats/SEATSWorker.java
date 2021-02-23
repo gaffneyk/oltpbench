@@ -400,6 +400,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
     // -----------------------------------------------------------------
 
     private boolean executeDeleteReservation(DeleteReservation proc) throws SQLException {
+	final long start = System.currentTimeMillis();
+
         // Pull off the first cached reservation and drop it on the cluster...
         final Reservation r = CACHE_RESERVATIONS.get(CacheType.PENDING_DELETES).poll();
         if (r == null) {
@@ -457,6 +459,9 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
             CACHE_RESERVATIONS.get(CacheType.PENDING_INSERTS).add(r);
         }
 
+	final long stop = System.currentTimeMillis();
+	// System.out.println("deleteReservation: " + (stop - start));
+
         return (true);
     }
     
@@ -470,6 +475,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
      * @throws SQLException
      */
     private boolean executeFindFlights(FindFlights proc) throws SQLException {
+	final long start = System.currentTimeMillis();
+
         long depart_airport_id;
         long arrive_airport_id;
         Timestamp start_date;
@@ -529,6 +536,10 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
             if (LOG.isDebugEnabled()) LOG.debug(String.format("Added %d out of %d FlightIds to local cache",
                                                 ctr, results.length));
         }
+
+	final long stop = System.currentTimeMillis();
+	// System.out.println("findFlights: " + (stop - start));
+
         return (true);
     }
 
@@ -541,7 +552,9 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
      * @throws SQLException
      */
     private boolean executeFindOpenSeats(FindOpenSeats proc) throws SQLException {
-        final FlightId search_flight = this.profile.getRandomFlightId();
+	final long start = System.currentTimeMillis();
+	    
+	final FlightId search_flight = this.profile.getRandomFlightId();
         assert(search_flight != null);
         Long airport_depart_id = search_flight.getDepartAirportId();
         
@@ -561,47 +574,56 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         assert(cache != null) : "Unexpected " + CacheType.PENDING_INSERTS;
         
         // Store pending reservations in our queue for a later transaction            
-        BitSet seats = getSeatsBitSet(search_flight);
-        tmp_reservations.clear();
-        
-        for (long seatnum : results) {
-            // We first try to get a CustomerId based at this departure airport
-            if (LOG.isTraceEnabled())
-                LOG.trace("Looking for a random customer to fly on " + search_flight);
-            CustomerId customer_id = profile.getRandomCustomerId(airport_depart_id);
-          
-            // We will go for a random one if:
-            //  (1) The Customer is already booked on this Flight
-            //  (2) We already made a new Reservation just now for this Customer
-            int tries = SEATSConstants.FLIGHTS_NUM_SEATS;
-            while (tries-- > 0 && (customer_id == null)) { //  || isCustomerBookedOnFlight(customer_id, flight_id))) {
-                customer_id = profile.getRandomCustomerId();
-                if (LOG.isTraceEnabled())
-                    LOG.trace("RANDOM CUSTOMER: " + customer_id);
-            } // WHILE
-            assert(customer_id != null) :
-                String.format("Failed to find a unique Customer to reserve for seat #%d on %s", seatnum, search_flight);
-    
-            Reservation r = new Reservation(profile.getNextReservationId(getId()),
-                                            search_flight,
-                                            customer_id,
-                                            (int)seatnum);
-            seats.set((int)seatnum);
-            tmp_reservations.add(r);
-            if (LOG.isTraceEnabled())
-                LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
-        } // WHILE
-      
-        if (tmp_reservations.isEmpty() == false) {
-            Collections.shuffle(tmp_reservations);
-            cache.addAll(tmp_reservations);
-            while (cache.size() > SEATSConstants.CACHE_LIMIT_PENDING_INSERTS) {
-                cache.remove();
-            } // WHILE
-            if (LOG.isDebugEnabled())
-                LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
-                          tmp_reservations.size(), search_flight, cache.size()));
-        }
+	//
+	// Note (Kevin): Actually, this queue is never used. Skip this part.
+	
+	
+
+////        BitSet seats = getSeatsBitSet(search_flight);
+//        tmp_reservations.clear();
+//        
+//        for (long seatnum : results) {
+//            // We first try to get a CustomerId based at this departure airport
+//            if (LOG.isTraceEnabled())
+//                LOG.trace("Looking for a random customer to fly on " + search_flight);
+//            CustomerId customer_id = profile.getRandomCustomerId(airport_depart_id);
+//          
+//            // We will go for a random one if:
+//            //  (1) The Customer is already booked on this Flight
+//            //  (2) We already made a new Reservation just now for this Customer
+//            int tries = SEATSConstants.FLIGHTS_NUM_SEATS;
+//            while (tries-- > 0 && (customer_id == null)) { //  || isCustomerBookedOnFlight(customer_id, flight_id))) {
+//                customer_id = profile.getRandomCustomerId();
+//                if (LOG.isTraceEnabled())
+//                    LOG.trace("RANDOM CUSTOMER: " + customer_id);
+//            } // WHILE
+//            assert(customer_id != null) :
+//                String.format("Failed to find a unique Customer to reserve for seat #%d on %s", seatnum, search_flight);
+//    
+//            Reservation r = new Reservation(profile.getNextReservationId(getId()),
+//                                            search_flight,
+//                                            customer_id,
+//                                            (int)seatnum);
+//            seats.set((int)seatnum);
+//            tmp_reservations.add(r);
+//            if (LOG.isTraceEnabled())
+//                LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
+//        } // WHILE
+//
+//        if (tmp_reservations.isEmpty() == false) {
+//            Collections.shuffle(tmp_reservations);
+//            cache.addAll(tmp_reservations);
+//            while (cache.size() > SEATSConstants.CACHE_LIMIT_PENDING_INSERTS) {
+//                cache.remove();
+//            } // WHILE
+//            if (LOG.isDebugEnabled())
+//                LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
+//                          tmp_reservations.size(), search_flight, cache.size()));
+//        }
+//
+//	final long stop = System.currentTimeMillis();
+//	// System.out.println("findOpenSeats: " + (stop - start));
+
         return (true);
     }
     
@@ -610,6 +632,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
     // ----------------------------------------------------------------
     
     private boolean executeNewReservation(NewReservation proc) throws SQLException {
+	final long start = System.currentTimeMillis();
+	
         Reservation reservation = null;
         BitSet seats = null;
         LinkedList<Reservation> cache = CACHE_RESERVATIONS.get(CacheType.PENDING_INSERTS);
@@ -700,6 +724,9 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         // Set it up so we can play with it later
         this.requeueReservation(reservation);
         
+	final long stop = System.currentTimeMillis();
+	// System.out.println("newReservation: " + (stop - start));
+
         return (true);
     }
 
@@ -708,6 +735,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
     // ----------------------------------------------------------------
     
     private boolean executeUpdateCustomer(UpdateCustomer proc) throws SQLException {
+	final long start = System.currentTimeMillis();
+
         // Pick a random customer and then have at it!
         CustomerId customer_id = this.profile.getRandomCustomerId();
         
@@ -748,6 +777,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         	}
         }
         
+	final long stop = System.currentTimeMillis();
+	// System.out.println("updateCustomer: " + (stop - start));
         
         return (true);
     }
@@ -757,6 +788,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
     // ----------------------------------------------------------------
 
     private boolean executeUpdateReservation(UpdateReservation proc) throws SQLException {
+	final long start = System.currentTimeMillis();
+
         LinkedList<Reservation> cache = CACHE_RESERVATIONS.get(CacheType.PENDING_UPDATES);
         assert(cache != null) : "Unexpected " + CacheType.PENDING_UPDATES;
         
@@ -808,6 +841,10 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         	}
         }
         SEATSWorker.this.requeueReservation(r);
+
+	final long stop = System.currentTimeMillis();
+	// System.out.println("updateReservation: " + (stop - start));
+
         return (true);
     }
 
