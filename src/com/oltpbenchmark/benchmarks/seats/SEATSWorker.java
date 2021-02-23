@@ -273,7 +273,7 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
     public SEATSWorker(SEATSBenchmark benchmark, int id) {
         super(benchmark, id);
 
-        this.rng = benchmark.getRandomGenerator();
+        this.rng = new RandomGenerator((int) System.currentTimeMillis());
         this.profile = new SEATSProfile(benchmark, rng); 
     }
     
