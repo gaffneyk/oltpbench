@@ -574,8 +574,8 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
         LinkedList<Reservation> cache = CACHE_RESERVATIONS.get(CacheType.PENDING_INSERTS);
         assert(cache != null) : "Unexpected " + CacheType.PENDING_INSERTS;
 
-        System.out.println("row count: " + rowCount);
-        System.out.println("cache size: " + cache.size());
+        // System.out.println("row count: " + rowCount);
+        // System.out.println("cache size: " + cache.size());
             
         // Store pending reservations in our queue for a later transaction            
 
