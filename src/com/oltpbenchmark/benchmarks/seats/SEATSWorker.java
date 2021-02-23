@@ -579,50 +579,50 @@ public class SEATSWorker extends Worker<SEATSBenchmark> {
 	
 	
 
-////        BitSet seats = getSeatsBitSet(search_flight);
-//        tmp_reservations.clear();
-//        
-//        for (long seatnum : results) {
-//            // We first try to get a CustomerId based at this departure airport
-//            if (LOG.isTraceEnabled())
-//                LOG.trace("Looking for a random customer to fly on " + search_flight);
-//            CustomerId customer_id = profile.getRandomCustomerId(airport_depart_id);
-//          
-//            // We will go for a random one if:
-//            //  (1) The Customer is already booked on this Flight
-//            //  (2) We already made a new Reservation just now for this Customer
-//            int tries = SEATSConstants.FLIGHTS_NUM_SEATS;
-//            while (tries-- > 0 && (customer_id == null)) { //  || isCustomerBookedOnFlight(customer_id, flight_id))) {
-//                customer_id = profile.getRandomCustomerId();
-//                if (LOG.isTraceEnabled())
-//                    LOG.trace("RANDOM CUSTOMER: " + customer_id);
-//            } // WHILE
-//            assert(customer_id != null) :
-//                String.format("Failed to find a unique Customer to reserve for seat #%d on %s", seatnum, search_flight);
-//    
-//            Reservation r = new Reservation(profile.getNextReservationId(getId()),
-//                                            search_flight,
-//                                            customer_id,
-//                                            (int)seatnum);
-//            seats.set((int)seatnum);
-//            tmp_reservations.add(r);
-//            if (LOG.isTraceEnabled())
-//                LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
-//        } // WHILE
-//
-//        if (tmp_reservations.isEmpty() == false) {
-//            Collections.shuffle(tmp_reservations);
-//            cache.addAll(tmp_reservations);
-//            while (cache.size() > SEATSConstants.CACHE_LIMIT_PENDING_INSERTS) {
-//                cache.remove();
-//            } // WHILE
-//            if (LOG.isDebugEnabled())
-//                LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
-//                          tmp_reservations.size(), search_flight, cache.size()));
-//        }
-//
-//	final long stop = System.currentTimeMillis();
-//	// System.out.println("findOpenSeats: " + (stop - start));
+       BitSet seats = getSeatsBitSet(search_flight);
+       tmp_reservations.clear();
+       
+       for (long seatnum : results) {
+           // We first try to get a CustomerId based at this departure airport
+           if (LOG.isTraceEnabled())
+               LOG.trace("Looking for a random customer to fly on " + search_flight);
+           CustomerId customer_id = profile.getRandomCustomerId(airport_depart_id);
+         
+           // We will go for a random one if:
+           //  (1) The Customer is already booked on this Flight
+           //  (2) We already made a new Reservation just now for this Customer
+           int tries = SEATSConstants.FLIGHTS_NUM_SEATS;
+           while (tries-- > 0 && (customer_id == null)) { //  || isCustomerBookedOnFlight(customer_id, flight_id))) {
+               customer_id = profile.getRandomCustomerId();
+               if (LOG.isTraceEnabled())
+                   LOG.trace("RANDOM CUSTOMER: " + customer_id);
+           } // WHILE
+           assert(customer_id != null) :
+               String.format("Failed to find a unique Customer to reserve for seat #%d on %s", seatnum, search_flight);
+   
+           Reservation r = new Reservation(profile.getNextReservationId(getId()),
+                                           search_flight,
+                                           customer_id,
+                                           (int)seatnum);
+           seats.set((int)seatnum);
+           tmp_reservations.add(r);
+           if (LOG.isTraceEnabled())
+               LOG.trace("QUEUED INSERT: " + search_flight + " / " + search_flight.encode() + " -> " + customer_id);
+       } // WHILE
+
+       if (tmp_reservations.isEmpty() == false) {
+           Collections.shuffle(tmp_reservations);
+           cache.addAll(tmp_reservations);
+           while (cache.size() > SEATSConstants.CACHE_LIMIT_PENDING_INSERTS) {
+               cache.remove();
+           } // WHILE
+           if (LOG.isDebugEnabled())
+               LOG.debug(String.format("Stored %d pending inserts for %s [totalPendingInserts=%d]",
+                         tmp_reservations.size(), search_flight, cache.size()));
+       }
+
+	final long stop = System.currentTimeMillis();
+	// System.out.println("findOpenSeats: " + (stop - start));
 
         return (true);
     }
